@@ -18,6 +18,8 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.SparkContext;
@@ -41,6 +43,8 @@ class SparkSQLExecutionContext implements ExecutionContext {
   private final EventEmitter eventEmitter;
   private final OpenLineageRunEventBuilder runEventBuilder;
   private final OpenLineage openLineage = new OpenLineage(Versions.OPEN_LINEAGE_PRODUCER_URI);
+  private static final Set<Long> sentStartExecutionIds = ConcurrentHashMap.newKeySet();
+  private static final Set<Long> sentCompleteExecutionIds = ConcurrentHashMap.newKeySet();
 
   private AtomicBoolean finished = new AtomicBoolean(false);
 
@@ -65,6 +69,9 @@ class SparkSQLExecutionContext implements ExecutionContext {
       log.info(
           "OpenLineage received Spark event that is configured to be skipped: SparkListenerSQLExecutionStart");
       return;
+    } else if (sentStartExecutionIds.contains(startEvent.executionId())) {
+      log.debug("START event for executionId {} already sent ", startEvent.executionId());
+      return;
     }
     RunEvent event =
         runEventBuilder.buildRun(
@@ -72,6 +79,7 @@ class SparkSQLExecutionContext implements ExecutionContext {
             openLineage.newRunEventBuilder().eventTime(toZonedTime(startEvent.time())),
             buildJob(olContext.getQueryExecution().get()),
             startEvent);
+    sentStartExecutionIds.add(executionId);
 
     log.debug("Posting event for start {}: {}", executionId, event);
     eventEmitter.emit(event);
@@ -90,6 +98,9 @@ class SparkSQLExecutionContext implements ExecutionContext {
       log.info(
           "OpenLineage received Spark event that is configured to be skipped: SparkListenerSQLExecutionEnd");
       return;
+    } else if (sentCompleteExecutionIds.contains(endEvent.executionId())) {
+      log.debug("START event for executionId {} already sent ", endEvent.executionId());
+      return;
     }
     RunEvent event =
         runEventBuilder.buildRun(
@@ -97,6 +108,7 @@ class SparkSQLExecutionContext implements ExecutionContext {
             openLineage.newRunEventBuilder().eventTime(toZonedTime(endEvent.time())),
             buildJob(olContext.getQueryExecution().get()),
             endEvent);
+    sentCompleteExecutionIds.add(executionId);
 
     log.debug("Posting event for end {}: {}", executionId, OpenLineageClientUtils.toJson(event));
     eventEmitter.emit(event);
@@ -162,6 +174,9 @@ class SparkSQLExecutionContext implements ExecutionContext {
       log.info(
           "OpenLineage received Spark event that is configured to be skipped: SparkListenerJobStart");
       return;
+    } else if (sentStartExecutionIds.contains(executionId)) {
+      log.debug("START event for executionId {} already sent ", executionId);
+      return;
     }
     RunEvent event =
         runEventBuilder.buildRun(
@@ -169,7 +184,7 @@ class SparkSQLExecutionContext implements ExecutionContext {
             openLineage.newRunEventBuilder().eventTime(toZonedTime(jobStart.time())),
             buildJob(olContext.getQueryExecution().get()),
             jobStart);
-
+    sentStartExecutionIds.add(executionId);
     log.debug("Posting event for start {}: {}", executionId, event);
     eventEmitter.emit(event);
   }
@@ -189,6 +204,9 @@ class SparkSQLExecutionContext implements ExecutionContext {
       log.info(
           "OpenLineage received Spark event that is configured to be skipped: SparkListenerJobEnd");
       return;
+    } else if (sentCompleteExecutionIds.contains(executionId)) {
+      log.debug("START event for executionId {} already sent ", executionId);
+      return;
     }
     RunEvent event =
         runEventBuilder.buildRun(
@@ -196,6 +214,7 @@ class SparkSQLExecutionContext implements ExecutionContext {
             openLineage.newRunEventBuilder().eventTime(toZonedTime(jobEnd.time())),
             buildJob(olContext.getQueryExecution().get()),
             jobEnd);
+    sentCompleteExecutionIds.add(executionId);
 
     log.debug("Posting event for end {}: {}", executionId, event);
     eventEmitter.emit(event);

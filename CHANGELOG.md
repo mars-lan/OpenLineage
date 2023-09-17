@@ -2,6 +2,10 @@
 
 ## [Unreleased](https://github.com/OpenLineage/OpenLineage/compare/1.2.0...HEAD)
 
+### Added
+* **Spark: support for latest 3.5** [`???`](https://github.com/OpenLineage/OpenLineage/pull/2076) [@pawel-big-lebowski](https://github.com/pawel-big-lebowski)  
+  *Run integration tests on Spark 3.5. Upgrade 3.3 branch to 3.3.3. Please note that `delta` and `iceberg` is not supported for Spark `3.5` at this time.*
+
 ## [1.2.0](https://github.com/OpenLineage/OpenLineage/compare/1.1.0...1.2.0) - 2023-09-14
 ### Added
 * **Spark: publish the `ProcessingEngineRunFacet` as part of the normal operation of the `OpenLineageSparkEventListener`** [`#2089`](https://github.com/OpenLineage/OpenLineage/pull/2089) [@d-m-h](https://github.com/d-m-h)  
